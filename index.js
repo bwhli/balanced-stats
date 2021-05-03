@@ -5,7 +5,7 @@ const balancedRewardsAddress = 'cx10d59e8103ab44635190bd4139dbfd682fa2d07e'
 const balnTokenAddress = 'cxf61cd5a45dc9f91c15aa65831a30a90d59a09619'
 
 addEventListener('fetch', event => {
-  event.respondWith(handleRequest(event.request))
+  event.respondWith(handleRequest(event))
 })
 
 async function gatherResponse(response) {
@@ -103,14 +103,22 @@ async function buildJsonResponse() {
   return response
 }
 
-async function handleRequest() {
-  response = await buildJsonResponse()
+async function handleRequest(event) {
+  const request = event.request
+  const cacheUrl = new URL(request.url)
+  const cacheKey = new Request(cacheUrl.toString(), request)
+  const cache = caches.default
 
-  const init = {
-    headers: {
-      'content-type': 'application/json;charset=UTF-8',
-    },
+  let response = await cache.match(cacheKey)
+  if (!response) {
+    response_payload = await buildJsonResponse()
+    let headers = new Headers()
+    headers.set('Content-Type', 'application/json')
+    headers.set('Cache-Control', 's-maxage=10')
+    response = new Response(JSON.stringify(response_payload), {
+      headers: headers,
+    })
   }
-
-  return new Response(JSON.stringify(response), init)
+  event.waitUntil(cache.put(cacheKey, response.clone()))
+  return response
 }
