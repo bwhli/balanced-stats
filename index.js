@@ -60,12 +60,15 @@ async function getPoolStats(poolId) {
     _id: poolId,
   })
   if (poolId == '1') {
-    return hexToInt(poolStats.quote, 18)
+    return {
+      base: await hexToInt(poolStats.quote, 18),
+      quote: await hexToInt(poolStats.quote, 18),
+    }
   } else {
-    return [
-      await hexToInt(poolStats.base, 18),
-      await hexToInt(poolStats.quote, 18),
-    ]
+    return {
+      base: await hexToInt(poolStats.base, 18),
+      quote: await hexToInt(poolStats.quote, 18),
+    }
   }
 }
 
@@ -78,7 +81,7 @@ async function getBalnSupply(type) {
   }
 }
 
-async function handleRequest() {
+async function buildJsonResponse() {
   response = {
     apy: {
       balnBnusdApy: await getApy('BALN/bnUSD'),
@@ -97,8 +100,17 @@ async function handleRequest() {
       sicxIcxPool: await getPoolStats('1'),
     },
   }
+  return response
+}
 
-  const init = { headers: { 'content-type': 'application/json;charset=UTF-8' } }
+async function handleRequest() {
+  response = await buildJsonResponse()
+
+  const init = {
+    headers: {
+      'content-type': 'application/json;charset=UTF-8',
+    },
+  }
 
   return new Response(JSON.stringify(response), init)
 }
