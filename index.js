@@ -1,6 +1,7 @@
 const icxApiEndpoint = 'https://ctz.solidwallet.io/api/v3'
 const balancedLoansAddress = 'cx66d4d90f5f113eba575bf793570135f9b10cece1'
 const balancedDexAddress = 'cxa0af3165c08318e988cb30993b3048335b94af6c'
+const balancedDollarAddress = 'cx88fd7df7ddff82f7cc735c871dc519838cb235bb'
 const balancedRewardsAddress = 'cx10d59e8103ab44635190bd4139dbfd682fa2d07e'
 const balnTokenAddress = 'cxf61cd5a45dc9f91c15aa65831a30a90d59a09619'
 const bandOracleAddress = 'cx087b4164a87fdfb7b714f3bafe9dfb050fd6b132'
@@ -72,6 +73,37 @@ async function getLoansTvl() {
   return { loansTvlIcx: loansTvlIcx, loansTvlUsd: loansTvlIcx * icxPrice }
 }
 
+async function getDexTvl() {
+  bandOracleCall = await icxCall(bandOracleAddress, 'get_ref_data', {
+    _symbol: 'ICX',
+  })
+  icxPrice = parseInt(bandOracleCall.rate, 16) / 1000000000
+  dexTvlSicxIcx = await hexToInt(
+    await icxCall(balancedDexAddress, 'totalSupply', { _id: '1' }),
+    18,
+  )
+  dexTvlSicxBnusd = await hexToInt(
+    await icxCall(balancedDexAddress, 'getPoolTotal', {
+      _id: '2',
+      _token: 'cx88fd7df7ddff82f7cc735c871dc519838cb235bb',
+    }),
+    18,
+  )
+  dexTvlBalnBnusd = await hexToInt(
+    await icxCall(balancedDexAddress, 'getPoolTotal', {
+      _id: '3',
+      _token: 'cx88fd7df7ddff82f7cc735c871dc519838cb235bb',
+    }),
+    18,
+  )
+  return {
+    dexTvlSicxIcx: dexTvlSicxIcx,
+    dexTvlSicxBnusd: dexTvlSicxBnusd,
+    dexTvlBalnBnusd: dexTvlBalnBnusd,
+    dexTvlUsd: dexTvlSicxIcx * icxPrice + dexTvlSicxBnusd + dexTvlBalnBnusd,
+  }
+}
+
 async function hexToInt(hex, dec) {
   return parseInt(hex, 16) / 10 ** dec
 }
@@ -134,6 +166,7 @@ async function buildJsonResponse() {
     },
     tvl: {
       loans: await getLoansTvl(),
+      dex: await getDexTvl(),
     },
   }
   return response
