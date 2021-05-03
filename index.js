@@ -62,14 +62,14 @@ async function icxGetBalance(address) {
   return json.result
 }
 
-async function getTvl() {
-  balancedBalance = await icxGetBalance(balancedDexAddress)
+async function getLoansTvl() {
+  loansTvl = await icxCall(balancedLoansAddress, 'getTotalCollateral', {})
   bandOracleCall = await icxCall(bandOracleAddress, 'get_ref_data', {
     _symbol: 'ICX',
   })
-  tvlIcx = await hexToInt(balancedBalance, 18)
+  loansTvlIcx = await hexToInt(loansTvl, 18)
   icxPrice = parseInt(bandOracleCall.rate, 16) / 1000000000
-  return { tvlIcx: tvlIcx, tvlUsd: tvlIcx * icxPrice }
+  return { loansTvlIcx: loansTvlIcx, loansTvlUsd: loansTvlIcx * icxPrice }
 }
 
 async function hexToInt(hex, dec) {
@@ -132,7 +132,9 @@ async function buildJsonResponse() {
       sicxBnusdPool: await getPoolStats('2'),
       sicxIcxPool: await getPoolStats('1'),
     },
-    tvl: await getTvl(),
+    tvl: {
+      loans: await getLoansTvl(),
+    },
   }
   return response
 }
@@ -148,7 +150,7 @@ async function handleRequest(event) {
     response_payload = await buildJsonResponse()
     let headers = new Headers()
     headers.set('Content-Type', 'application/json')
-    headers.set('Cache-Control', 's-maxage=10')
+    headers.set('Cache-Control', 's-maxage=30')
     headers.set('Access-Control-Allow-Origin', '*')
     response = new Response(JSON.stringify(response_payload), {
       headers: headers,
